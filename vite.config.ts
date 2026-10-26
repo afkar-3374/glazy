@@ -7,7 +7,7 @@ import pkg from './package.json';
 
 // Version shown in Settings: package version + commit + build date
 function commit(): string {
-  if (process.env.VERCEL_GIT_COMMIT_SHA) return process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 7);
+  if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA.slice(0, 7);
   try {
     return execSync('git rev-parse --short HEAD').toString().trim();
   } catch {

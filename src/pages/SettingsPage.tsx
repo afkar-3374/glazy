@@ -218,7 +218,7 @@ const SettingsPage: React.FC = () => {
             <div className="px-3.5 pb-3 pt-1 space-y-3 bg-stone-50/70 dark:bg-stone-900/20 rounded-2xl">
               <div>
                 <p className="text-xs font-bold">Auto-lock</p>
-                <p className="text-[10px] text-stone-500 mb-2">After Glazy has been in the background this long, it asks for your PIN again</p>
+                <p className="text-[10px] text-stone-500 mb-2">After Glazy has been in the background this long, it opens to the Kitty Timer again</p>
                 <div className="flex flex-wrap gap-1.5">
                   {AUTO_LOCK_OPTIONS.map(({ seconds, label }) => (
                     <button
@@ -238,7 +238,7 @@ const SettingsPage: React.FC = () => {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-bold">Lock now</p>
-                  <p className="text-[10px] text-stone-500">Lock Glazy straight away</p>
+                  <p className="text-[10px] text-stone-500">Hide Glazy behind the Kitty Timer straight away</p>
                 </div>
                 <button onClick={lock} className="btn-gloss rounded-full px-3 py-1 text-xs font-semibold flex items-center gap-1">
                   <Lock className="w-3.5 h-3.5" /> Lock

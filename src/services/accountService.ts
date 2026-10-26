@@ -62,6 +62,16 @@ export const accountService = {
     await callFunction('register', body);
   },
 
+  /**
+   * Mark the couple as active. Spaces nobody opens for 30 days are deleted, so this runs
+   * whenever Glazy is unlocked (the server counts at most once an hour).
+   */
+  async touchActivity(): Promise<void> {
+    if (!supabase) return;
+    const { error } = await supabase.rpc('touch_activity');
+    if (error) console.warn('Unable to record activity:', error.message);
+  },
+
   /** Sign in through the `login` function (which locks an ID after 5 wrong PINs). */
   async signIn(handle: string, pin: string): Promise<void> {
     if (!supabase) throw new AccountError('Glazy is not connected to its server yet.');

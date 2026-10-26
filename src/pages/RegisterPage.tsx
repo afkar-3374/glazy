@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AtSign, Check, ChevronLeft, Eye, EyeOff, Loader2, Lock, ShieldCheck, Smartphone, User, X } from 'lucide-react';
+import { AtSign, Check, Clock, ChevronLeft, Eye, EyeOff, Loader2, Lock, ShieldCheck, Smartphone, User, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { accountService, AccountError, HANDLE_RE, PIN_LENGTH, normalizeHandle, type NewPartner } from '../services/accountService';
 import { useAuthStore } from '../store/useAuthStore';
@@ -192,7 +192,7 @@ const RegisterPage: React.FC = () => {
             <ChevronLeft className="w-6 h-6" />
           </button>
         ) : (
-          <Link to="/login" className="p-2 -ml-2 rounded-full text-stone-600 dark:text-stone-300" aria-label="Back to login">
+          <Link to="/login" className="p-2 -ml-2 rounded-full text-stone-600 dark:text-stone-300" aria-label="Back">
             <ChevronLeft className="w-6 h-6" />
           </Link>
         )}
@@ -227,6 +227,7 @@ const RegisterPage: React.FC = () => {
                     { icon: User, t: 'Made for two', d: 'Glazy accounts come in pairs. Nobody can join your space after it’s made.' },
                     { icon: Lock, t: 'Each of you picks an ID and a PIN', d: 'You’ll each log in on your own phone with them.' },
                     { icon: ShieldCheck, t: 'Private by design', d: 'Chats, photos and voice notes are encrypted on your phones. Not even Glazy can read them.' },
+                    { icon: Clock, t: 'Unused spaces are deleted', d: 'If neither of you opens Glazy for 30 days, your space and everything in it is deleted for good.' },
                   ].map(({ icon: Icon, t, d }) => (
                     <li key={t} className="flex gap-3 p-4 rounded-3xl bg-white/80 dark:bg-[#1E1D24]/80 border border-rose-100/70 dark:border-stone-800">
                       <span className="w-10 h-10 flex-shrink-0 rounded-2xl bg-rose-50 dark:bg-[#C95565]/15 text-[#C95565] flex items-center justify-center"><Icon className="w-5 h-5" /></span>

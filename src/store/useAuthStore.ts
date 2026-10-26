@@ -196,6 +196,7 @@ export const useAuthStore = create<AuthState>()(
       refreshProfiles: async () => {
         const current = get().user;
         if (!current) return;
+        void accountService.touchActivity();
         // Policies only return this couple's two profiles
         const profiles = await chatService.getProfiles();
         const me = profiles.find((p) => p.id === current.id);

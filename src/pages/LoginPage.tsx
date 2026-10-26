@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Heart, Delete, AtSign, ArrowRight } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
 import { HANDLE_RE, PIN_LENGTH, normalizeHandle } from '../services/accountService';
 import confetti from 'canvas-confetti';
+import { KittyTimer } from '../components/Decoy/KittyTimer';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
 
@@ -25,6 +26,9 @@ const LoginPage: React.FC = () => {
   const isLoading = useAuthStore((s) => s.isLoading);
   const authError = useAuthStore((s) => s.error);
   const addToast = useUIStore((s) => s.addToast);
+  const navigate = useNavigate();
+  // Opens as a plain timer: 3 taps on the kitty → log in, 5 taps → register a couple
+  const [showTimer, setShowTimer] = useState(true);
 
   // Known phone: only the PIN. New phone (or "not you?"): ID first, then the PIN.
   const [otherAccount, setOtherAccount] = useState(false);
@@ -62,7 +66,7 @@ const LoginPage: React.FC = () => {
 
   // Physical keyboard support for the PIN
   useEffect(() => {
-    if (askingId) return;
+    if (askingId || showTimer) return;
     const onKey = (e: KeyboardEvent) => {
       if (/^\d$/.test(e.key)) press(e.key);
       else if (e.key === 'Backspace') press('del');
@@ -72,6 +76,10 @@ const LoginPage: React.FC = () => {
   });
 
   const idValid = HANDLE_RE.test(normalizeHandle(handle));
+
+  if (showTimer) {
+    return <KittyTimer onSecretTap={() => setShowTimer(false)} onRegisterTap={() => navigate('/register')} />;
+  }
 
   return (
     <div className="min-h-[100dvh] flex flex-col justify-between p-6 bg-gradient-to-b from-[#FDF8F6] via-[#FCE8EC]/50 to-[#FDF8F6] dark:from-[#16151A] dark:via-[#4A1D28]/30 dark:to-[#16151A] relative overflow-hidden">
@@ -185,14 +193,6 @@ const LoginPage: React.FC = () => {
       </motion.div>
 
       <div className="text-center pb-2 pt-6 z-10">
-        {!usingSaved && (
-          <p className="text-sm text-stone-600 dark:text-stone-300 mb-3">
-            New here?{' '}
-            <Link to="/register" className="font-bold text-[#C95565]">
-              Create your couple space
-            </Link>
-          </p>
-        )}
         <p className="text-[11px] font-medium text-stone-400 dark:text-stone-500">
           End-to-end encrypted · only the two of you can read it
         </p>

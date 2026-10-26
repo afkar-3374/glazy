@@ -63,3 +63,7 @@ shot-*.png
 __apph.html
 __frame.html
 src/__apph.tsx
+
+# Database password and server secrets (never commit)
+.secrets.local
+!.env.example
