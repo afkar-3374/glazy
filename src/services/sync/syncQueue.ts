@@ -1,0 +1,76 @@
+import { ivyDb } from '../../db/ivyDb';
+import type { SyncQueueItem, QueueActionType } from '../../types';
+import { generateLocalUuid } from '../../utils/message';
+import { logger } from '../logger/logger';
+
+export class SyncQueue {
+  async enqueue(action_type: QueueActionType, payload: Record<string, unknown>): Promise<SyncQueueItem> {
+    const existing = await ivyDb.syncQueue
+      .where('action_type')
+      .equals(action_type)
+      .filter((item) => {
+        if (item.status === 'Sending') return false;
+        const current = item.payload as Record<string, unknown>;
+        // Only merge actions about the same message (or the same reaction). Comparing
+        // missing keys (undefined === undefined) used to merge unrelated messages.
+        if (payload.local_uuid !== undefined) return current.local_uuid === payload.local_uuid;
+        if (payload.message_id !== undefined) {
+          return current.message_id === payload.message_id && current.profile_id === payload.profile_id;
+        }
+        return false;
+      })
+      .first();
+
+    if (existing) {
+      await ivyDb.syncQueue.update(existing.id, { payload, status: 'Queued', error_message: undefined });
+      return { ...existing, payload, status: 'Queued', error_message: undefined };
+    }
+
+    const item: SyncQueueItem = {
+      id: generateLocalUuid(),
+      action_type,
+      payload,
+      retry_count: 0,
+      status: 'Queued',
+      created_at: new Date().toISOString()
+    };
+
+    await ivyDb.syncQueue.put(item);
+    logger.sync(`Action [${action_type}] enqueued locally`, item.id);
+    return item;
+  }
+
+  /** Items left "Sending" by a closed or frozen app are picked up again. */
+  async resetInterrupted(): Promise<void> {
+    await ivyDb.syncQueue.where('status').equals('Sending').modify({ status: 'Queued' });
+  }
+
+  async getPending(): Promise<SyncQueueItem[]> {
+    return await ivyDb.syncQueue
+      .where('status')
+      .anyOf(['Queued', 'Failed'])
+      .filter((item) => item.retry_count < 8)
+      .sortBy('created_at');
+  }
+
+  async updateStatus(id: string, status: SyncQueueItem['status'], error_message?: string): Promise<void> {
+    const item = await ivyDb.syncQueue.get(id);
+    if (item) {
+      item.status = status;
+      if (status === 'Failed') {
+        item.retry_count += 1;
+      }
+      if (error_message) {
+        item.error_message = error_message;
+      }
+      await ivyDb.syncQueue.put(item);
+    }
+  }
+
+  async remove(id: string): Promise<void> {
+    await ivyDb.syncQueue.delete(id);
+    logger.sync('Queue item removed', id);
+  }
+}
+
+export const syncQueue = new SyncQueue();

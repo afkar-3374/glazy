@@ -1,0 +1,444 @@
+import { supabase } from './supabaseClient';
+import { coupleTopic } from './coupleScope';
+import { logger } from './logger/logger';
+import type { CallType } from '../types';
+
+export type SignalingEvent =
+  | { type: 'offer'; callType: CallType; sdp: RTCSessionDescriptionInit; callerId: string; restart?: boolean }
+  | { type: 'answer'; sdp: RTCSessionDescriptionInit; receiverId: string }
+  | { type: 'ice-candidate'; candidate: RTCIceCandidateInit; senderId: string }
+  | { type: 'end-call'; senderId: string }
+  | { type: 'reject-call'; senderId: string }
+  | { type: 'busy'; senderId: string }
+  | { type: 'answered-elsewhere'; senderId: string };
+
+const STUN_SERVERS: RTCIceServer[] = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun.cloudflare.com:3478' },
+];
+
+const SIGNAL_READY_TIMEOUT_MS = 5000;
+
+export class CallService {
+  private peerConnection: RTCPeerConnection | null = null;
+  private localStream: MediaStream | null = null;
+  private remoteStream: MediaStream | null = null;
+  private channel: ReturnType<NonNullable<typeof supabase>['channel']> | null = null;
+
+  private onRemoteStreamCallback: ((stream: MediaStream) => void) | null = null;
+  private onSignalingEventCallback: ((event: SignalingEvent) => void) | null = null;
+  private onConnectionStateChange: ((state: RTCPeerConnectionState) => void) | null = null;
+  private pendingIceCandidates: RTCIceCandidateInit[] = [];
+  private signalingUserId: string | null = null;
+  private signalingStatus = 'CLOSED';
+  private recoveryTimer: number | null = null;
+  private iceServers: RTCIceServer[] = STUN_SERVERS;
+  private seenSignalIds = new Set<string>();
+  private iceServersExpireAt = 0;
+
+  /**
+   * Fetch short-lived TURN relay credentials (only the couple can get them).
+   * Relays let calls connect on mobile data and strict Wi-Fi where direct links fail.
+   */
+  async loadIceServers(): Promise<void> {
+    if (!supabase || Date.now() < this.iceServersExpireAt) return;
+    try {
+      // Never let a slow network hold up a call: fall back to direct connections after 4s
+      const { data, error } = await Promise.race([
+        supabase.functions.invoke('turn-credentials'),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('TURN credentials timed out')), 4000)),
+      ]);
+      if (error) throw error;
+      const relays = (data?.iceServers ?? []) as RTCIceServer[];
+      if (relays.length > 0) {
+        this.iceServers = [...STUN_SERVERS, ...relays];
+        this.iceServersExpireAt = Date.now() + ((data?.ttl ?? 3600) - 300) * 1000;
+      }
+    } catch (err) {
+      logger.warn('TURN credentials unavailable, using direct connections only:', err);
+      this.iceServersExpireAt = Date.now() + 60_000;
+    }
+  }
+
+  setConnectionStateListener(fn: (state: RTCPeerConnectionState) => void) {
+    this.onConnectionStateChange = fn;
+  }
+
+  initSignaling(userId: string, onEvent: (event: SignalingEvent) => void): () => void {
+    this.onSignalingEventCallback = onEvent;
+
+    if (!supabase) return () => {};
+
+    if (this.channel && this.signalingUserId === userId) {
+      return () => this.stopSignaling(userId);
+    }
+
+    const channelName = coupleTopic('calls');
+    if (this.channel) {
+      supabase.removeChannel(this.channel);
+    }
+
+    const channel = supabase.channel(channelName, {
+      config: { private: true, broadcast: { self: false } },
+    });
+    this.channel = channel;
+    this.signalingUserId = userId;
+    this.signalingStatus = 'CONNECTING';
+
+    channel
+      .on('broadcast', { event: 'signal' }, ({ payload }) => {
+        if (this.channel !== channel) return; // a replaced channel can still deliver
+        if (!payload || (payload as { targetUserId?: string }).targetUserId !== userId) return;
+        const sigId = (payload as { sigId?: string }).sigId;
+        if (sigId) {
+          if (this.seenSignalIds.has(sigId)) return; // same signal delivered twice
+          this.seenSignalIds.add(sigId);
+          if (this.seenSignalIds.size > 500) this.seenSignalIds.clear();
+        }
+        logger.info('Received call signal:', payload?.type);
+        if (this.onSignalingEventCallback) {
+          const { targetUserId: _targetUserId, sigId: _sigId, ...event } = payload as SignalingEvent & { targetUserId: string; sigId?: string };
+          this.onSignalingEventCallback(event);
+        }
+      })
+      .subscribe((status) => {
+        // Status reports from a channel that was already replaced must not affect the new one
+        if (this.channel !== channel) return;
+        this.signalingStatus = status;
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          this.scheduleRecovery();
+        }
+      });
+
+    return () => {
+      this.stopSignaling(userId);
+    };
+  }
+
+  recoverSignaling(): void {
+    if (!this.signalingUserId || !this.onSignalingEventCallback || !supabase) return;
+    const userId = this.signalingUserId;
+    const callback = this.onSignalingEventCallback;
+    if (this.channel) supabase.removeChannel(this.channel);
+    this.channel = null;
+    this.signalingStatus = 'CLOSED';
+    this.initSignaling(userId, callback);
+  }
+
+  private scheduleRecovery(): void {
+    if (this.recoveryTimer !== null || !this.signalingUserId) return;
+    this.recoveryTimer = window.setTimeout(() => {
+      this.recoveryTimer = null;
+      this.recoverSignaling();
+    }, 1500);
+  }
+
+  private stopSignaling(userId: string): void {
+    if (this.signalingUserId !== userId) return;
+    if (this.recoveryTimer !== null) {
+      clearTimeout(this.recoveryTimer);
+      this.recoveryTimer = null;
+    }
+    if (supabase && this.channel) supabase.removeChannel(this.channel);
+    this.channel = null;
+    this.signalingUserId = null;
+    this.signalingStatus = 'CLOSED';
+  }
+
+  async sendSignal(targetUserId: string, payload: SignalingEvent): Promise<void> {
+    if (!supabase) {
+      logger.warn('Supabase not available – signaling skipped');
+      return;
+    }
+    try {
+      if (!(await this.waitForSignaling())) throw new Error('Call signaling is not connected');
+      const result = await this.channel!.send({
+        type: 'broadcast',
+        event: 'signal',
+        payload: { ...payload, targetUserId, sigId: crypto.randomUUID() },
+      });
+      if (result !== 'ok') throw new Error(`Signal delivery failed: ${result}`);
+    } catch (err) {
+      logger.error('Error sending call signal:', err);
+    }
+  }
+
+  /** Wait (briefly) for the signaling channel to be ready, reconnecting it if needed. */
+  private async waitForSignaling(): Promise<boolean> {
+    if (this.channel && this.signalingStatus === 'SUBSCRIBED') return true;
+    if (!this.channel || this.signalingStatus !== 'CONNECTING') this.recoverSignaling();
+    const deadline = Date.now() + SIGNAL_READY_TIMEOUT_MS;
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 100));
+      if (this.channel && this.signalingStatus === 'SUBSCRIBED') return true;
+    }
+    return false;
+  }
+
+  async getLocalMedia(callType: CallType, facingMode: 'user' | 'environment' = 'user'): Promise<MediaStream> {
+    const videoConstraints: MediaTrackConstraints | false =
+      callType === 'video'
+        ? {
+            facingMode,
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            frameRate: { ideal: 30, max: 60 },
+            aspectRatio: { ideal: 16 / 9 },
+          }
+        : false;
+
+    const constraints: MediaStreamConstraints = {
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        sampleRate: 48000,
+      },
+      video: videoConstraints,
+    };
+
+    try {
+      this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (err: unknown) {
+      // Fallback: if ideal video constraints fail, try basic constraints
+      if (callType === 'video' && err instanceof Error && err.name !== 'NotAllowedError') {
+        logger.warn('High-quality video constraints failed, trying basic constraints:', err.message);
+        this.localStream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+          video: { facingMode },
+        });
+      } else {
+        throw err;
+      }
+    }
+    return this.localStream;
+  }
+
+  createPeerConnection(
+    onRemoteStream: (stream: MediaStream) => void,
+    onIceCandidate: (candidate: RTCIceCandidate) => void
+  ): RTCPeerConnection {
+    // Clean up existing peer connection
+    if (this.peerConnection) {
+      this.peerConnection.close();
+    }
+    // Keep candidates that arrived while ringing: they are needed once the offer is applied
+
+    this.onRemoteStreamCallback = onRemoteStream;
+    this.remoteStream = new MediaStream();
+    this.peerConnection = new RTCPeerConnection({ iceServers: this.iceServers });
+
+    this.peerConnection.ontrack = (event) => {
+      // Add each track individually to the remote stream for stability
+      // (handles cases where streams[0] may not exist on some browsers)
+      const tracks = event.streams?.[0]?.getTracks() ?? [event.track];
+      tracks.forEach((track) => {
+        if (!this.remoteStream) return;
+        // Avoid duplicate tracks
+        const existingTrack = this.remoteStream.getTracks().find(
+          (t) => t.kind === track.kind
+        );
+        if (existingTrack && existingTrack.id !== track.id) {
+          this.remoteStream.removeTrack(existingTrack);
+        }
+        if (!this.remoteStream.getTracks().includes(track)) {
+          this.remoteStream.addTrack(track);
+        }
+      });
+      if (this.onRemoteStreamCallback && this.remoteStream) {
+        this.onRemoteStreamCallback(this.remoteStream);
+      }
+    };
+
+    this.peerConnection.onicecandidate = (event) => {
+      if (event.candidate) {
+        onIceCandidate(event.candidate);
+      }
+    };
+
+    this.peerConnection.onconnectionstatechange = () => {
+      const state = this.peerConnection?.connectionState;
+      logger.info('WebRTC connection state changed:', state);
+      if (state && this.onConnectionStateChange) {
+        this.onConnectionStateChange(state);
+      }
+    };
+
+    this.peerConnection.oniceconnectionstatechange = () => {
+      logger.info('ICE connection state:', this.peerConnection?.iceConnectionState);
+    };
+
+    // Add local tracks to peer connection
+    if (this.localStream) {
+      this.localStream.getTracks().forEach((track) => {
+        if (this.peerConnection && this.localStream) {
+          this.peerConnection.addTrack(track, this.localStream);
+        }
+      });
+    }
+
+    return this.peerConnection;
+  }
+
+  async createOffer(includeVideo = false): Promise<RTCSessionDescriptionInit> {
+    if (!this.peerConnection) throw new Error('Peer connection not created');
+    const offer = await this.peerConnection.createOffer({
+      offerToReceiveAudio: true,
+      offerToReceiveVideo: includeVideo,
+    });
+    await this.peerConnection.setLocalDescription(offer);
+    return offer;
+  }
+
+  async handleOfferAndCreateAnswer(offer: RTCSessionDescriptionInit): Promise<RTCSessionDescriptionInit> {
+    if (!this.peerConnection) throw new Error('Peer connection not created');
+    await this.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+    await this.flushPendingIceCandidates();
+    const answer = await this.peerConnection.createAnswer();
+    await this.peerConnection.setLocalDescription(answer);
+    return answer;
+  }
+
+  /** Forget candidates from a previous call before a new one starts ringing. */
+  resetPendingCandidates(): void {
+    this.pendingIceCandidates = [];
+  }
+
+  async handleAnswer(answer: RTCSessionDescriptionInit): Promise<void> {
+    if (this.peerConnection && this.peerConnection.signalingState !== 'stable') {
+      await this.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+      await this.flushPendingIceCandidates();
+    }
+  }
+
+  async addIceCandidate(candidate: RTCIceCandidateInit): Promise<void> {
+    if (this.peerConnection?.remoteDescription) {
+      try {
+        await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (e) {
+        logger.warn('Error adding ICE candidate:', e);
+      }
+    } else {
+      this.pendingIceCandidates.push(candidate);
+    }
+  }
+
+  private async flushPendingIceCandidates(): Promise<void> {
+    const candidates = this.pendingIceCandidates.splice(0);
+    for (const candidate of candidates) await this.addIceCandidate(candidate);
+  }
+
+  toggleMicrophone(enabled: boolean): void {
+    this.localStream?.getAudioTracks().forEach((t) => (t.enabled = enabled));
+  }
+
+  toggleCamera(enabled: boolean): void {
+    this.localStream?.getVideoTracks().forEach((t) => (t.enabled = enabled));
+  }
+
+  async replaceLocalStream(stream: MediaStream): Promise<void> {
+    if (!this.peerConnection) return;
+
+    const tracksByKind = new Map(stream.getTracks().map((track) => [track.kind, track]));
+    const previousTracks = this.peerConnection.getSenders()
+      .map((sender) => sender.track)
+      .filter((track): track is MediaStreamTrack => track !== null);
+    await Promise.all(
+      this.peerConnection.getSenders().map(async (sender) => {
+        const replacement = sender.track ? tracksByKind.get(sender.track.kind) : undefined;
+        if (replacement) await sender.replaceTrack(replacement);
+      })
+    );
+    previousTracks.forEach((track) => {
+      if (!tracksByKind.has(track.kind)) return;
+      track.stop();
+    });
+  }
+
+  /** Use another microphone (on Android this also moves the call's sound to that route). */
+  async switchMicrophone(deviceId: string): Promise<MediaStream | null> {
+    if (!this.localStream) return null;
+    const previous = this.localStream.getAudioTracks()[0];
+    const fresh = await navigator.mediaDevices.getUserMedia({
+      audio: { deviceId: { exact: deviceId }, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
+    const track = fresh.getAudioTracks()[0];
+    if (!track) return null;
+    track.enabled = previous ? previous.enabled : true;
+
+    const sender = this.peerConnection?.getSenders().find((s) => s.track?.kind === 'audio');
+    if (sender) await sender.replaceTrack(track);
+    if (previous) {
+      this.localStream.removeTrack(previous);
+      previous.stop();
+    }
+    this.localStream.addTrack(track);
+    return this.localStream;
+  }
+
+  async restartIce(): Promise<RTCSessionDescriptionInit | null> {
+    if (!this.peerConnection) return null;
+    try {
+      const offer = await this.peerConnection.createOffer({ iceRestart: true });
+      await this.peerConnection.setLocalDescription(offer);
+      return offer;
+    } catch (err) {
+      logger.error('Failed to restart ICE:', err);
+      return null;
+    }
+  }
+
+  async checkMicrophonePermission(): Promise<PermissionState | 'unknown'> {
+    if (typeof navigator !== 'undefined' && navigator.permissions && navigator.permissions.query) {
+      try {
+        const res = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        return res.state;
+      } catch {
+        return 'unknown';
+      }
+    }
+    return 'unknown';
+  }
+
+  async checkCameraPermission(): Promise<PermissionState | 'unknown'> {
+    if (typeof navigator !== 'undefined' && navigator.permissions && navigator.permissions.query) {
+      try {
+        const res = await navigator.permissions.query({ name: 'camera' as PermissionName });
+        return res.state;
+      } catch {
+        return 'unknown';
+      }
+    }
+    return 'unknown';
+  }
+
+  hasVideoTrack(): boolean {
+    return (this.localStream?.getVideoTracks().length ?? 0) > 0;
+  }
+
+  getRemoteVideoTrack(): MediaStreamTrack | null {
+    return this.remoteStream?.getVideoTracks()[0] ?? null;
+  }
+
+  getConnectionState(): RTCPeerConnectionState | null {
+    return this.peerConnection?.connectionState ?? null;
+  }
+
+  endCall(): void {
+    this.localStream?.getTracks().forEach((t) => t.stop());
+    this.localStream = null;
+
+    this.remoteStream?.getTracks().forEach((t) => t.stop());
+    this.remoteStream = null;
+
+    if (this.peerConnection) {
+      this.peerConnection.close();
+      this.peerConnection = null;
+    }
+    this.pendingIceCandidates = [];
+    logger.info('Call ended – peer connection closed');
+  }
+}
+
+export const callService = new CallService();
