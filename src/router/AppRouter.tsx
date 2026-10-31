@@ -5,6 +5,9 @@ import { PublicRoute } from './PublicRoute';
 import { Loader } from '../components/ui/Loader';
 import { useAuthStore } from '../store/useAuthStore';
 
+const LandingPage = lazy(() => import('../pages/LandingPage'));
+const TermsPage = lazy(() => import('../pages/LegalPage').then((m) => ({ default: m.TermsPage })));
+const PrivacyPage = lazy(() => import('../pages/LegalPage').then((m) => ({ default: m.PrivacyPage })));
 const LoginPage = lazy(() => import('../pages/LoginPage'));
 const RegisterPage = lazy(() => import('../pages/RegisterPage'));
 const ChatPage = lazy(() => import('../pages/ChatPage'));
@@ -34,7 +37,12 @@ export const AppRouter: React.FC = () => {
     >
       <Routes>
         {/* Public Routes */}
+        {/* Legal pages: always public */}
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+
         <Route element={<PublicRoute />}>
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
         </Route>
