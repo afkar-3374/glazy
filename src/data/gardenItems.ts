@@ -37,6 +37,18 @@ export const GARDEN_ITEMS: GardenItem[] = [
   { id: 'windmill', name: 'Windmill', emoji: '🌬️', cost: 400, description: 'A windmill turning on the far hill', x: 153, y: 61, scale: 0.7, far: true, clear: [0, 0] },
   { id: 'cottage', name: 'Our cottage', emoji: '🏡', cost: 500, description: 'Your cozy home with a glowing window', x: 26, y: 70, scale: 0.95, far: true, clear: [14, 24] },
   { id: 'gazebo', name: 'Fairy-light gazebo', emoji: '✨', cost: 800, description: 'A gazebo wrapped in twinkling lights', x: 104, y: 73, scale: 0.75, far: true, clear: [10, 22] },
+  // More things to build: a bigger shop
+  { id: 'tulips', name: 'Tulip bed', emoji: '🌷', cost: 30, description: 'Rows of tulips in every colour', x: 8, y: 86, scale: 0.7, clear: [4, 4] },
+  { id: 'pumpkins', name: 'Pumpkin patch', emoji: '🎃', cost: 40, description: 'Round pumpkins ready for autumn', x: 136, y: 100, scale: 0.6, clear: [4, 3] },
+  { id: 'birdhouse', name: 'Birdhouse', emoji: '🐦', cost: 45, description: 'A cosy house for singing birds', x: 70, y: 70, scale: 0.7, far: true, clear: [3, 6] },
+  { id: 'windchimes', name: 'Wind chimes', emoji: '🎐', cost: 50, description: 'Chimes that sing when the breeze blows', x: 92, y: 58, scale: 0.8, far: true, clear: [0, 0] },
+  { id: 'sunflowers', name: 'Sunflower row', emoji: '🌻', cost: 55, description: 'Tall sunflowers that turn to the sun', x: 152, y: 100, scale: 0.7, clear: [5, 6] },
+  { id: 'heartgarland', name: 'Heart garland', emoji: '💗', cost: 60, description: 'Pink hearts strung across the sky', x: 100, y: 40, scale: 0.9, far: true, clear: [0, 0] },
+  { id: 'campfire', name: 'Campfire', emoji: '🔥', cost: 75, description: 'Toast marshmallows together at night', x: 30, y: 98, scale: 0.6, clear: [3, 4] },
+  { id: 'kite', name: 'Kite', emoji: '🪁', cost: 85, description: 'A heart kite dancing above the garden', x: 128, y: 30, scale: 0.8, far: true, clear: [0, 0] },
+  { id: 'moonlamp', name: 'Moon lamp', emoji: '🌙', cost: 130, description: 'A crescent moon that glows softly', x: 64, y: 52, scale: 0.8, far: true, clear: [3, 6] },
+  { id: 'cherry', name: 'Cherry blossom tree', emoji: '🌸', cost: 220, description: 'Pink petals drift down on you both', x: 4, y: 66, scale: 0.9, far: true, clear: [10, 26] },
+  { id: 'rainbow', name: 'Rainbow arch', emoji: '🌈', cost: 300, description: 'A rainbow over the garden, just for you', x: 120, y: 44, scale: 1, far: true, clear: [0, 0] },
 ];
 
 export const ITEM_BY_ID = Object.fromEntries(GARDEN_ITEMS.map((i) => [i.id, i])) as Record<string, GardenItem>;

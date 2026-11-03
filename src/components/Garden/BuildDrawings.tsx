@@ -325,6 +325,108 @@ export const DRAWINGS: Record<string, React.FC<{ night: boolean }>> = {
         ))}
     </g>
   ),
+  tulips: () => (
+    <g>
+      <path d="M-6 0 V-5 M-2 0 V-6 M2 0 V-6 M6 0 V-5" stroke="#5FAE6A" strokeWidth="0.7" />
+      <path d="M-8 -5 C-8 -9 -4 -9 -4 -5 Z" fill="#FF9DB4" />
+      <path d="M-4 -6 C-4 -10.5 0 -10.5 0 -6 Z" fill="#F2577C" />
+      <path d="M0 -6 C0 -10.5 4 -10.5 4 -6 Z" fill="#FFB3C6" />
+      <path d="M4 -5 C4 -9 8 -9 8 -5 Z" fill="#FF9DB4" />
+    </g>
+  ),
+  pumpkins: () => (
+    <g>
+      <ellipse cx="-3.2" cy="-2.6" rx="3.4" ry="2.7" fill="#F28C38" />
+      <ellipse cx="3.2" cy="-2.2" rx="3.2" ry="2.5" fill="#E8772A" />
+      <path d="M-3.2 -5.2 V-6.6" stroke="#4E8A3E" strokeWidth="0.8" />
+      <path d="M3.2 -4.6 V-6" stroke="#4E8A3E" strokeWidth="0.8" />
+    </g>
+  ),
+  birdhouse: () => (
+    <g>
+      <rect x="-0.4" y="-9" width="0.8" height="9" fill="url(#wood)" />
+      <path d="M-4.2 -9 L0 -13.5 L4.2 -9 Z" fill="#B8385A" />
+      <rect x="-3.3" y="-9.2" width="6.6" height="5" fill="url(#woodLight)" />
+      <circle cx="0" cy="-7" r="1.1" fill="#3A2A2E" />
+    </g>
+  ),
+  windchimes: () => (
+    <g>
+      <path d="M-6 -19 H6" stroke="url(#wood)" strokeWidth="1" />
+      <line x1="-4" y1="-19" x2="-4" y2="-14" stroke="#8A5733" strokeWidth="0.3" />
+      <line x1="-1.5" y1="-19" x2="-1.5" y2="-13" stroke="#8A5733" strokeWidth="0.3" />
+      <line x1="1" y1="-19" x2="1" y2="-14" stroke="#8A5733" strokeWidth="0.3" />
+      <line x1="3.5" y1="-19" x2="3.5" y2="-12" stroke="#8A5733" strokeWidth="0.3" />
+      <rect x="-4.6" y="-14" width="1.2" height="5" rx="0.5" fill="#F7B6C8" />
+      <rect x="-2.1" y="-13" width="1.2" height="7" rx="0.5" fill="#FFD2D8" />
+      <rect x="0.4" y="-14" width="1.2" height="6" rx="0.5" fill="#F27A93" />
+      <rect x="2.9" y="-12" width="1.2" height="7" rx="0.5" fill="#E3B07D" />
+    </g>
+  ),
+  sunflowers: () => (
+    <g>
+      <line x1="-5" y1="0" x2="-5" y2="-11" stroke="#5FAE6A" strokeWidth="0.8" />
+      <line x1="0" y1="0" x2="0" y2="-14" stroke="#5FAE6A" strokeWidth="0.8" />
+      <line x1="5" y1="0" x2="5" y2="-11" stroke="#5FAE6A" strokeWidth="0.8" />
+      <circle cx="-5" cy="-11" r="3" fill="#FFC53D" />
+      <circle cx="0" cy="-14" r="3.4" fill="#FFC53D" />
+      <circle cx="5" cy="-11" r="3" fill="#FFC53D" />
+      <circle cx="-5" cy="-11" r="1.1" fill="#7A4A1E" />
+      <circle cx="0" cy="-14" r="1.3" fill="#7A4A1E" />
+      <circle cx="5" cy="-11" r="1.1" fill="#7A4A1E" />
+    </g>
+  ),
+  heartgarland: () => (
+    <g>
+      <path d="M-22 0 Q0 9 22 0" fill="none" stroke="#B8385A" strokeWidth="0.4" />
+      <Heart x={-16} y={2.1} s={1.4} fill="#F27A93" />
+      <Heart x={-8} y={3.8} s={1.4} fill="#F2577C" />
+      <Heart x={0} y={4.5} s={1.4} fill="#FF9DB4" />
+      <Heart x={8} y={3.8} s={1.4} fill="#F2577C" />
+      <Heart x={16} y={2.1} s={1.4} fill="#F27A93" />
+    </g>
+  ),
+  campfire: ({ night }) => (
+    <g>
+      <path d="M-5 0 L4 -2.5 M-4 -2.5 L5 0" stroke="url(#wood)" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M0 -10 C3 -7 3 -4.5 1.5 -3 C2.4 -5 0.8 -6 0 -7.5 C-0.6 -5.6 -2.4 -5 -2 -3 C-3.2 -4.5 -3 -7 0 -10 Z" fill="#FF8A3D" />
+      <path d="M0 -7.5 C1.2 -6 1.2 -4.5 0.4 -3.5 C-0.4 -4.4 -1.2 -4.8 0 -7.5 Z" fill="#FFE07A" />
+      <Glow x={0} y={-5} r={14} night={night} />
+    </g>
+  ),
+  kite: () => (
+    <g>
+      <path d="M0 -20 L5 -14 L0 -8 L-5 -14 Z" fill="#F2577C" />
+      <path d="M0 -20 V-8 M-5 -14 H5" stroke="#FFF7EE" strokeWidth="0.6" />
+      <path d="M0 -8 Q-3 -4 1 -1 Q-2 2 0 0" fill="none" stroke="#B8385A" strokeWidth="0.4" />
+    </g>
+  ),
+  moonlamp: () => (
+    <g>
+      <rect x="-0.5" y="-9" width="1" height="9" fill="url(#stone)" />
+      <circle cx="0" cy="-14" r="5" fill="#FFE7A3" />
+      <circle cx="2.2" cy="-15.2" r="4.2" fill="#FFF7EE" />
+    </g>
+  ),
+  cherry: () => (
+    <g>
+      <path d="M-1.4 0 L-0.8 -14 L0.8 -14 L1.4 0 Z" fill="url(#wood)" />
+      <circle cx="-7" cy="-18" r="5" fill="#FF9DB8" />
+      <circle cx="0" cy="-22" r="6" fill="#FFC2D6" />
+      <circle cx="7" cy="-18" r="5" fill="#FF9DB8" />
+      <circle cx="-3" cy="-14" r="4" fill="#FFC2D6" />
+      <circle cx="4" cy="-13" r="4" fill="#FF9DB8" />
+    </g>
+  ),
+  rainbow: () => (
+    <g fill="none" strokeWidth="1.5">
+      <path d="M-14 0 A14 14 0 0 1 14 0" stroke="#F2577C" />
+      <path d="M-12.5 0 A12.5 12.5 0 0 1 12.5 0" stroke="#FFB35C" />
+      <path d="M-11 0 A11 11 0 0 1 11 0" stroke="#FFE07A" />
+      <path d="M-9.5 0 A9.5 9.5 0 0 1 9.5 0" stroke="#8FDC8E" />
+      <path d="M-8 0 A8 8 0 0 1 8 0" stroke="#7CC4F2" />
+    </g>
+  ),
 };
 
 /** viewBox for each drawing when shown on its own (shop thumbnails). */
@@ -348,4 +450,15 @@ export const PREVIEW_BOX: Record<string, string> = {
   bunnies: '-9 -12 18 13',
   hammock: '-14 -20 28 21',
   telescope: '-8 -19 18 20',
+  tulips: '-9 -11 18 12',
+  pumpkins: '-7 -8 14 9',
+  birdhouse: '-5 -14 10 15',
+  windchimes: '-7 -20 14 22',
+  sunflowers: '-9 -16 18 17',
+  heartgarland: '-24 -6 48 12',
+  campfire: '-7 -12 14 13',
+  kite: '-7 -22 14 24',
+  moonlamp: '-7 -22 14 24',
+  cherry: '-12 -25 24 26',
+  rainbow: '-16 -15 32 16',
 };

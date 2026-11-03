@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Heart, Download, Smartphone, Lock, MessageCircle, Sprout, Gamepad2, Globe, Share, LogIn, X, Clock,
+  type LucideIcon,
 } from 'lucide-react';
 import { useUIStore } from '../store/useUIStore';
 import { KittyGuide } from '../components/Landing/KittyGuide';
@@ -11,7 +12,7 @@ import {
 
 const FEATURES = [
   { icon: MessageCircle, t: 'Chat', d: 'Messages with replies, reactions, photos, audio and voice or video calls.' },
-  { icon: Sprout, t: 'Garden', d: 'Water a shared garden every day. Watering on the same day together earns bonus points and a rainbow.' },
+  { icon: Sprout, t: 'Garden', d: 'Water a shared garden every day and build 30 cute things together, from tulip beds to a rainbow arch.' },
   { icon: Globe, t: 'World', d: 'A small 3D town where you dress up your avatar and explore together.' },
   { icon: Gamepad2, t: 'Play', d: 'Daily games such as Tic-Tac-Toe and a daily doodle, with weekly scores.' },
   { icon: Heart, t: 'Us', d: 'Your start date, special dates and little love taps.' },
@@ -74,8 +75,8 @@ const InstallSection: React.FC = () => {
   if (installed) {
     return (
       <section className="text-center space-y-3">
-        <p className="text-stone-600 dark:text-stone-300">Glazy is installed on this device.</p>
-        <Link to="/login" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#C95565] text-white font-semibold shadow-soft">
+        <p className="text-white/80">Glazy is installed on this device.</p>
+        <Link to="/login" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#FF3B5C] text-white font-semibold shadow-[0_8px_24px_rgba(255,59,92,0.35)]">
           <LogIn className="w-4 h-4" /> Open Glazy
         </Link>
       </section>
@@ -117,11 +118,11 @@ const InstallSection: React.FC = () => {
       <button
         onClick={onInstallClick}
         disabled={busy}
-        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-[#C95565] text-white font-semibold shadow-soft hover:bg-[#B34757] active-scale disabled:opacity-60"
+        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-[#FF3B5C] text-white font-semibold shadow-[0_10px_30px_rgba(255,59,92,0.35)] hover:bg-[#E62E4E] active:scale-[0.98] transition disabled:opacity-60"
       >
         <Download className="w-5 h-5" /> {busy ? 'Installing…' : label}
       </button>
-      <p className="text-xs text-stone-500 dark:text-stone-400">
+      <p className="text-xs text-white/60">
         {canOneTap
           ? 'Your browser will ask you to confirm. Glazy then appears on your home screen like a store app.'
           : device === 'ios'
@@ -130,19 +131,19 @@ const InstallSection: React.FC = () => {
       </p>
 
       {showSteps && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4" role="dialog" aria-modal="true">
-          <div className="w-full max-w-md bg-[#FDF8F6] dark:bg-[#1E1D24] rounded-3xl p-6 shadow-soft text-left">
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-end sm:items-center justify-center p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-md bg-[#17161B] text-white rounded-3xl p-6 shadow-[0_20px_60px_rgba(255,59,92,0.25)] text-left border border-white/10">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-serif text-xl font-bold text-stone-900 dark:text-stone-100">{DIALOG_TITLE}</h3>
-              <button onClick={() => setShowSteps(false)} className="p-1 text-stone-500" aria-label="Close">
+              <h3 className="font-serif text-xl font-bold">{DIALOG_TITLE}</h3>
+              <button onClick={() => setShowSteps(false)} className="p-1 text-white/60" aria-label="Close">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <ol className="space-y-2 list-decimal pl-5 text-sm text-stone-700 dark:text-stone-200">
+            <ol className="space-y-2 list-decimal pl-5 text-sm text-white/85">
               {STEP_LISTS[stepsKey].map((s) => <li key={s}>{s}</li>)}
             </ol>
             {stepsKey === 'ios' && (
-              <p className="mt-3 flex items-center gap-2 text-xs text-stone-500">
+              <p className="mt-3 flex items-center gap-2 text-xs text-white/60">
                 <Share className="w-4 h-4" /> Look for the Share icon in Safari.
               </p>
             )}
@@ -153,6 +154,15 @@ const InstallSection: React.FC = () => {
   );
 };
 
+const Card: React.FC<{ icon: LucideIcon; t: string; d: string }> = ({ icon: Icon, t, d }) => (
+  <div className="bg-[#17161B] border border-white/10 rounded-2xl p-4">
+    <div className="flex items-center gap-2 font-semibold">
+      <Icon className="w-4 h-4 text-[#FF3B5C]" /> {t}
+    </div>
+    <p className="text-sm text-white/70 mt-1">{d}</p>
+  </div>
+);
+
 const LandingPage: React.FC = () => {
   useEffect(() => {
     document.title = 'Glazy · a private space for two';
@@ -162,26 +172,26 @@ const LandingPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-full bg-[#FDF8F6] dark:bg-[#16151A] text-stone-800 dark:text-stone-100 overflow-y-auto">
-      <div className="max-w-2xl mx-auto px-4 pb-16 pt-10 space-y-12">
-        <header className="text-center space-y-5 rounded-[2rem] bg-gradient-to-b from-[#FCE8EC] via-[#FDF8F6] to-[#FDF8F6] dark:from-[#4A1D28]/40 dark:via-[#16151A] dark:to-[#16151A] px-5 pt-8 pb-10">
+    <div className="min-h-full bg-[#0B0A0D] text-white overflow-y-auto">
+      <div className="max-w-2xl mx-auto px-5 pb-16 pt-10 space-y-14">
+        <header className="text-center space-y-5 rounded-[2rem] bg-gradient-to-b from-[#FF3B5C]/25 via-[#17161B] to-[#0B0A0D] border border-white/10 px-5 pt-8 pb-10">
           <h1 className="font-serif italic font-bold text-5xl tracking-tight">Glazy</h1>
-          <p className="text-xl font-semibold text-[#C95565]">Two hearts, one little space.</p>
+          <p className="text-xl font-semibold text-[#FF8FA3]">Two hearts, one little space.</p>
           <KittyGuide />
           <div className="flex flex-col sm:flex-row justify-center gap-3 pt-2">
-            <a href="#install" className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#C95565] text-white font-semibold shadow-soft hover:bg-[#B34757]">
+            <a href="#install" className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#FF3B5C] text-white font-semibold shadow-[0_8px_24px_rgba(255,59,92,0.35)] hover:bg-[#E62E4E]">
               <Download className="w-4 h-4" /> Download the Glazy app
             </a>
-            <Link to="/login" className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full border border-[#C95565] text-[#C95565] font-semibold">
+            <Link to="/login" className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full border border-white/70 text-white font-semibold hover:bg-white hover:text-[#0B0A0D]">
               <LogIn className="w-4 h-4" /> Open in browser
             </Link>
           </div>
-          <p className="text-xs text-stone-500 dark:text-stone-400">Works on Android and iPhone</p>
+          <p className="text-xs text-white/60">Works on Android and iPhone</p>
         </header>
 
         <section className="space-y-3">
           <h2 className="font-serif text-2xl font-bold">What is Glazy?</h2>
-          <p className="text-stone-600 dark:text-stone-300">
+          <p className="text-white/75">
             Glazy is an app for two people. You make one space together, and everything in it, from messages to
             photos, is shared only between the two of you.
           </p>
@@ -190,26 +200,19 @@ const LandingPage: React.FC = () => {
         <section className="space-y-3">
           <h2 className="font-serif text-2xl font-bold">What you can do</h2>
           <div className="grid gap-3 sm:grid-cols-2">
-            {FEATURES.map(({ icon: Icon, t, d }) => (
-              <div key={t} className="bg-white dark:bg-[#1E1D24] rounded-2xl p-4 shadow-soft">
-                <div className="flex items-center gap-2 font-semibold">
-                  <Icon className="w-4 h-4 text-[#C95565]" /> {t}
-                </div>
-                <p className="text-sm text-stone-600 dark:text-stone-300 mt-1">{d}</p>
-              </div>
-            ))}
+            {FEATURES.map((f) => <Card key={f.t} icon={f.icon} t={f.t} d={f.d} />)}
           </div>
         </section>
 
         <section className="space-y-3">
           <h2 className="font-serif text-2xl font-bold">How it works</h2>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {HOW_IT_WORKS.map(({ icon: Icon, t, d }) => (
               <div key={t} className="flex gap-3">
-                <Icon className="w-5 h-5 mt-0.5 text-[#C95565] shrink-0" />
+                <Icon className="w-5 h-5 mt-0.5 text-[#FF3B5C] shrink-0" />
                 <div>
                   <p className="font-semibold">{t}</p>
-                  <p className="text-sm text-stone-600 dark:text-stone-300">{d}</p>
+                  <p className="text-sm text-white/70">{d}</p>
                 </div>
               </div>
             ))}
@@ -218,23 +221,23 @@ const LandingPage: React.FC = () => {
 
         <section className="space-y-3">
           <h2 className="font-serif text-2xl font-bold">How to use Glazy</h2>
-          <ol className="space-y-2 list-decimal pl-5 text-stone-700 dark:text-stone-200">
+          <ol className="space-y-2 list-decimal pl-5 text-white/85">
             {STEPS.map((s) => <li key={s}>{s}</li>)}
           </ol>
-          <p className="text-sm text-stone-500 dark:text-stone-400">
+          <p className="text-sm text-white/60">
             Tip: keep your PIN somewhere safe. It is the only key to your space.
           </p>
         </section>
 
-        <div id="install" className="scroll-mt-6 space-y-3">
+        <div id="install" className="scroll-mt-6 space-y-4">
           <h2 className="font-serif text-2xl font-bold text-center">Install the app</h2>
           <InstallSection />
         </div>
 
-        <footer className="pt-6 border-t border-stone-200 dark:border-stone-700 text-sm text-stone-500 dark:text-stone-400 flex flex-wrap justify-center gap-x-6 gap-y-2">
-          <Link to="/terms" className="hover:underline">Terms</Link>
-          <Link to="/privacy" className="hover:underline">Privacy</Link>
-          <Link to="/login" className="hover:underline">Sign in</Link>
+        <footer className="pt-6 border-t border-white/10 text-sm text-white/60 flex flex-wrap justify-center gap-x-6 gap-y-2">
+          <Link to="/terms" className="hover:text-[#FF8FA3] hover:underline">Terms</Link>
+          <Link to="/privacy" className="hover:text-[#FF8FA3] hover:underline">Privacy</Link>
+          <Link to="/login" className="hover:text-[#FF8FA3] hover:underline">Sign in</Link>
         </footer>
       </div>
     </div>
