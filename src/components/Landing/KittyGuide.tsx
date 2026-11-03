@@ -16,95 +16,128 @@ const LINES = [
 const TYPE_MS = 28;
 const HOLD_MS = 2600;
 
-const BLACK = '#17161B';
+const BLACK = "#3A3742";
+const BLACK_SOFT = "#2C2A33";
 const RED = '#FF3B5C';
 const PINK = '#FF8FA3';
+const WHITE = '#FFFFFF';
 
-/** Full-length standing kitty: black coat, white chest and paws, red bow. */
-const StandingKitty: React.FC<{ reduce: boolean; talking: boolean }> = ({ reduce, talking }) => {
-  const idle = reduce ? undefined : { scaleY: [1, 1.025, 1] };
+/**
+ * Kitty in side profile, facing right: black coat, white chest and paws, red bow.
+ * Breathes, swishes its tail, blinks, twitches an ear, lifts a paw to wave and
+ * opens its mouth when it talks.
+ */
+const SideKitty: React.FC<{ reduce: boolean; talking: boolean }> = ({ reduce, talking }) => {
   return (
     <motion.svg
-      viewBox="0 0 220 350"
+      viewBox="0 0 280 300"
       role="img"
       aria-label="Kitty, the Glazy guide"
-      className="w-[250px] sm:w-[300px] h-auto mx-auto"
+      className="w-[260px] sm:w-[300px] h-auto mx-auto"
       style={{ overflow: 'visible' }}
     >
       {/* tail, swishing from its base */}
       <motion.path
-        d="M150 300 C190 296 196 250 178 226 C170 216 160 222 166 232 C176 248 170 282 146 286 Z"
-        fill={BLACK}
-        animate={reduce ? undefined : { rotate: [0, 10, 0, -6, 0] }}
-        transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
-        style={{ transformOrigin: '150px 300px' }}
+        d="M66 196 C30 196 20 160 34 132 C40 120 52 122 50 134 C46 152 56 166 80 170 Z"
+        fill={BLACK} stroke={PINK} strokeWidth="1.4" strokeOpacity="0.6"
+        animate={reduce ? undefined : { rotate: [0, -12, 0, 8, 0] }}
+        transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ transformOrigin: '80px 196px' }}
       />
+
       {/* body breathing */}
-      <motion.g animate={idle} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }} style={{ transformOrigin: '110px 330px' }}>
-        <ellipse cx="110" cy="236" rx="60" ry="80" fill={BLACK} />
-        <ellipse cx="110" cy="246" rx="32" ry="52" fill="#FFFFFF" />
-        {/* legs */}
-        <rect x="70" y="292" width="30" height="40" rx="15" fill={BLACK} />
-        <rect x="120" y="292" width="30" height="40" rx="15" fill={BLACK} />
-        <ellipse cx="85" cy="330" rx="17" ry="9" fill="#FFFFFF" />
-        <ellipse cx="135" cy="330" rx="17" ry="9" fill="#FFFFFF" />
-        {/* left arm resting */}
-        <ellipse cx="58" cy="236" rx="13" ry="34" fill={BLACK} transform="rotate(10 58 236)" />
-      </motion.g>
-      {/* waving right arm */}
       <motion.g
-        animate={reduce ? undefined : { rotate: [0, -24, 0, -24, 0] }}
-        transition={{ duration: 2.6, repeat: Infinity, repeatDelay: 1.6, ease: 'easeInOut' }}
-        style={{ transformOrigin: '162px 220px' }}
+        animate={reduce ? undefined : { scaleY: [1, 1.03, 1] }}
+        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ transformOrigin: '130px 240px' }}
       >
-        <ellipse cx="164" cy="246" rx="13" ry="36" fill={BLACK} transform="rotate(-12 164 246)" />
-        <ellipse cx="172" cy="276" rx="10" ry="8" fill="#FFFFFF" />
+        {/* back legs (behind the body) */}
+        <rect x="74" y="200" width="22" height="66" rx="11" fill={BLACK_SOFT} />
+        <ellipse cx="86" cy="266" rx="16" ry="8" fill={WHITE} />
+
+        <ellipse cx="128" cy="198" rx="78" ry="46" fill={BLACK} stroke={PINK} strokeWidth="1.6" strokeOpacity="0.6" />
+        {/* neck joining head and body */}
+        <ellipse cx="180" cy="150" rx="30" ry="40" fill={BLACK} stroke={PINK} strokeWidth="1.4" strokeOpacity="0.6" />
+        {/* white chest on the front side */}
+        <ellipse cx="184" cy="204" rx="20" ry="26" fill={WHITE} />
+
+        {/* front legs */}
+        <motion.g
+          animate={reduce ? undefined : { rotate: [0, 4, 0, -4, 0] }}
+          transition={{ duration: 3.6, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ transformOrigin: '164px 200px' }}
+        >
+          <rect x="152" y="200" width="24" height="66" rx="12" fill={BLACK} />
+          <ellipse cx="166" cy="266" rx="17" ry="8" fill={WHITE} />
+        </motion.g>
       </motion.g>
-      {/* ears */}
-      <path d="M62 84 L58 22 L104 60 Z" fill={BLACK} />
-      <path d="M158 84 L162 22 L116 60 Z" fill={BLACK} />
-      <path d="M66 76 L64 40 L92 62 Z" fill={PINK} />
-      <path d="M154 76 L156 40 L128 62 Z" fill={PINK} />
-      {/* head bobbing while talking */}
+
+      {/* head bobbing, lifted paw and talking */}
       <motion.g
         animate={reduce ? undefined : { y: talking ? [0, -3, 0] : [0, -1.5, 0] }}
         transition={{ duration: talking ? 0.5 : 2.6, repeat: Infinity, ease: 'easeInOut' }}
       >
-        <ellipse cx="110" cy="110" rx="60" ry="52" fill={BLACK} />
-        <ellipse cx="110" cy="128" rx="30" ry="20" fill="#FFFFFF" />
-        {/* eyes with blinking */}
+        {/* back ear */}
+        <motion.path
+          d="M190 74 L204 30 L226 70 Z"
+          fill={BLACK} stroke={PINK} strokeWidth="1.4" strokeOpacity="0.6"
+          animate={reduce ? undefined : { rotate: [0, 0, -8, 0, 0] }}
+          transition={{ duration: 4.2, repeat: Infinity, times: [0, 0.7, 0.8, 0.9, 1] }}
+          style={{ transformOrigin: '206px 70px' }}
+        />
+        <path d="M198 66 L206 44 L218 64 Z" fill={PINK} />
+        {/* head */}
+        <ellipse cx="200" cy="112" rx="50" ry="46" fill={BLACK} stroke={PINK} strokeWidth="1.6" strokeOpacity="0.6" />
+        {/* front ear */}
+        <motion.path
+          d="M160 86 L170 38 L198 74 Z"
+          fill={BLACK} stroke={PINK} strokeWidth="1.4" strokeOpacity="0.6"
+          animate={reduce ? undefined : { rotate: [0, 0, 6, 0, 0] }}
+          transition={{ duration: 3.8, repeat: Infinity, times: [0, 0.75, 0.82, 0.9, 1] }}
+          style={{ transformOrigin: '184px 80px' }}
+        />
+        <path d="M168 84 L174 52 L190 76 Z" fill={PINK} />
+        {/* muzzle */}
+        <ellipse cx="238" cy="126" rx="16" ry="12" fill={WHITE} />
+        {/* eye (blinks) */}
         <motion.g
           animate={reduce ? undefined : { scaleY: [1, 1, 0.1, 1, 1] }}
           transition={{ duration: 3.6, repeat: Infinity, times: [0, 0.9, 0.93, 0.96, 1] }}
-          style={{ transformOrigin: '110px 104px' }}
+          style={{ transformOrigin: '218px 106px' }}
         >
-          <ellipse cx="86" cy="104" rx="11" ry="13" fill="#FFFFFF" />
-          <ellipse cx="134" cy="104" rx="11" ry="13" fill="#FFFFFF" />
-          <circle cx="88" cy="106" r="6.5" fill="#14131A" />
-          <circle cx="136" cy="106" r="6.5" fill="#14131A" />
-          <circle cx="90" cy="103" r="2.2" fill="#FFFFFF" />
-          <circle cx="138" cy="103" r="2.2" fill="#FFFFFF" />
+          <ellipse cx="218" cy="106" rx="9" ry="11" fill={WHITE} />
+          <circle cx="221" cy="108" r="6" fill="#14131A" />
+          <circle cx="223" cy="105" r="2.2" fill={WHITE} />
         </motion.g>
         {/* blush */}
-        <ellipse cx="70" cy="126" rx="9" ry="5" fill={RED} opacity="0.55" />
-        <ellipse cx="150" cy="126" rx="9" ry="5" fill={RED} opacity="0.55" />
+        <ellipse cx="222" cy="126" rx="7" ry="4.5" fill={RED} opacity="0.55" />
         {/* nose and mouth */}
-        <path d="M105 118 L115 118 L110 124 Z" fill={RED} />
+        <path d="M248 116 L256 118 L250 124 Z" fill={RED} />
         <motion.path
-          d="M110 124 Q104 132 98 128 M110 124 Q116 132 122 128"
+          d="M250 124 Q246 134 240 132"
           fill="none"
-          stroke="#FFFFFF"
-          strokeWidth="2.4"
+          stroke={WHITE}
+          strokeWidth="2.2"
           strokeLinecap="round"
-          animate={reduce ? undefined : { d: talking ? ['M110 124 Q104 132 98 128 M110 124 Q116 132 122 128', 'M110 124 Q104 138 98 130 M110 124 Q116 138 122 130', 'M110 124 Q104 132 98 128 M110 124 Q116 132 122 128'] : undefined }}
+          animate={reduce ? undefined : { d: talking ? ['M250 124 Q246 134 240 132', 'M250 124 Q246 142 238 140', 'M250 124 Q246 134 240 132'] : undefined }}
           transition={{ duration: 0.45, repeat: talking ? Infinity : 0 }}
         />
         {/* whiskers */}
-        <path d="M44 118 L14 110 M44 128 L14 132 M176 118 L206 110 M176 128 L206 132" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" opacity="0.6" />
-        {/* red bow tie */}
-        <path d="M110 166 L88 154 L88 178 Z" fill={RED} />
-        <path d="M110 166 L132 154 L132 178 Z" fill={RED} />
-        <circle cx="110" cy="166" r="6" fill="#B3142E" />
+        <path d="M256 122 L278 116 M256 128 L278 132" stroke={WHITE} strokeWidth="1.6" strokeLinecap="round" opacity="0.6" />
+        {/* red bow at the neck */}
+        <path d="M184 150 L170 140 L170 162 Z" fill={RED} />
+        <path d="M184 150 L198 140 L198 162 Z" fill={RED} />
+        <circle cx="184" cy="150" r="5" fill="#B3142E" />
+      </motion.g>
+
+      {/* waving paw, raised from the front shoulder */}
+      <motion.g
+        animate={reduce ? undefined : { rotate: [0, -28, 0, -28, 0] }}
+        transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 2, ease: 'easeInOut' }}
+        style={{ transformOrigin: '186px 176px' }}
+      >
+        <rect x="178" y="130" width="16" height="50" rx="8" fill={BLACK_SOFT} />
+        <ellipse cx="186" cy="130" rx="10" ry="9" fill={WHITE} />
       </motion.g>
     </motion.svg>
   );
@@ -151,7 +184,7 @@ export const KittyGuide: React.FC = () => {
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <StandingKitty reduce={reduce} talking={typing} />
+      <SideKitty reduce={reduce} talking={typing} />
       <div className="relative w-full max-w-sm min-h-[5.5rem]">
         <AnimatePresence mode="wait">
           <motion.button
