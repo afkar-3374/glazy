@@ -3,13 +3,11 @@ import { Link } from 'react-router-dom';
 import {
   Heart, Download, Smartphone, Lock, MessageCircle, Sprout, Gamepad2, Globe, Share, LogIn, X, Clock,
 } from 'lucide-react';
-import { useInstallPrompt } from '../hooks/useInstallPrompt';
-
-type Platform = 'ios' | 'android' | 'other';
-
-const isInstalled = () =>
-  window.matchMedia('(display-mode: standalone)').matches ||
-  (navigator as Navigator & { standalone?: boolean }).standalone === true;
+import { useUIStore } from '../store/useUIStore';
+import { KittyGuide } from '../components/Landing/KittyGuide';
+import {
+  detectInstallDevice, isAppInstalled, isIOSNonSafari, type InstallDevice,
+} from '../services/installDevice';
 
 const FEATURES = [
   { icon: MessageCircle, t: 'Chat', d: 'Messages with replies, reactions, photos, audio and voice or video calls.' },
@@ -32,10 +30,46 @@ const HOW_IT_WORKS = [
   { icon: Clock, t: 'Unused spaces are removed', d: 'If neither of you opens Glazy for 30 days, your space and everything in it is deleted for good.' },
 ];
 
+const STEP_LISTS: Record<'ios' | 'iosOther' | 'android' | 'other', string[]> = {
+  android: [
+    'Open this page in Chrome or Edge.',
+    'Tap the menu (⋮) at the top right.',
+    'Tap "Install app" (or "Add to Home screen").',
+    'Confirm "Install". Glazy appears on your home screen and in your app drawer.',
+  ],
+  ios: [
+    'Tap the Share button at the bottom of Safari.',
+    'Scroll down and tap "Add to Home Screen".',
+    'Tap "Add". Glazy appears on your home screen.',
+  ],
+  iosOther: [
+    'This browser cannot add apps to an iPhone.',
+    'Copy this page address, open it in Safari, then tap Share and "Add to Home Screen".',
+  ],
+  other: [
+    'On Android, open this page in Chrome, tap the menu (⋮), then "Install app".',
+    'On iPhone, open this page in Safari, tap Share, then "Add to Home Screen".',
+    'On a computer, look for the install icon in the address bar of Chrome or Edge.',
+  ],
+};
+
+const DIALOG_TITLE = 'Add Glazy to your device';
+
 const InstallSection: React.FC = () => {
-  const { canInstall, promptInstall } = useInstallPrompt();
-  const [stepsFor, setStepsFor] = useState<Platform | null>(null);
-  const [installed] = useState(isInstalled);
+  const deferredPrompt = useUIStore((s) => s.deferredInstallPrompt);
+  const setInstallPrompt = useUIStore((s) => s.setInstallPrompt);
+  const addToast = useUIStore((s) => s.addToast);
+  const [device] = useState<InstallDevice>(detectInstallDevice);
+  const [iosOther] = useState(isIOSNonSafari);
+  const [installed, setInstalled] = useState(isAppInstalled);
+  const [showSteps, setShowSteps] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const onInstalled = () => setInstalled(true);
+    window.addEventListener('appinstalled', onInstalled);
+    return () => window.removeEventListener('appinstalled', onInstalled);
+  }, []);
 
   if (installed) {
     return (
@@ -48,68 +82,66 @@ const InstallSection: React.FC = () => {
     );
   }
 
-  const openSteps = (p: Platform) => {
-    if (p === 'android' && canInstall) {
-      promptInstall();
+  // Chrome or Edge offered a real install: use it directly
+  const canOneTap = Boolean(deferredPrompt);
+
+  const onInstallClick = async () => {
+    if (!deferredPrompt) {
+      setShowSteps(true);
       return;
     }
-    setStepsFor(p);
+    setBusy(true);
+    try {
+      const promptEvent = deferredPrompt as { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
+      await promptEvent.prompt();
+      const choice = await promptEvent.userChoice;
+      if (choice.outcome === 'accepted') {
+        setInstalled(true);
+      } else {
+        addToast('Install cancelled. You can try again any time.', 'info');
+      }
+    } finally {
+      // A prompt can only be used once
+      setInstallPrompt(null);
+      setBusy(false);
+    }
   };
 
-  const STEP_LISTS: Record<Platform, string[]> = {
-    android: [
-      'Open this page in Chrome.',
-      'Tap the menu (⋮) at the top right.',
-      'Tap "Install app" (or "Add to Home screen").',
-      'Confirm "Install". Glazy appears on your home screen and in your app drawer.',
-    ],
-    ios: [
-      'Open this page in Safari (iPhone apps can only be added from Safari).',
-      'Tap the Share button at the bottom of the screen.',
-      'Scroll down and tap "Add to Home Screen".',
-      'Tap "Add". Glazy appears on your home screen.',
-    ],
-    other: [
-      'On Android, open this page in Chrome, tap the menu (⋮), then "Install app".',
-      'On iPhone, open this page in Safari, tap Share, then "Add to Home Screen".',
-      'On a computer, look for the install icon in the address bar of Chrome or Edge.',
-    ],
-  };
+  const stepsKey: keyof typeof STEP_LISTS =
+    device === 'ios' ? (iosOther ? 'iosOther' : 'ios') : device === 'android' ? 'android' : 'other';
+
+  const label = !canOneTap && device === 'ios' ? 'Add Glazy to iPhone' : 'Install Glazy';
 
   return (
-    <section className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <button
-          onClick={() => openSteps('android')}
-          className="flex items-center justify-center gap-2 px-5 py-4 rounded-2xl bg-[#C95565] text-white font-semibold shadow-soft hover:bg-[#B34757] active-scale"
-        >
-          <Download className="w-5 h-5" /> Install for Android
-        </button>
-        <button
-          onClick={() => openSteps('ios')}
-          className="flex items-center justify-center gap-2 px-5 py-4 rounded-2xl bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900 font-semibold shadow-soft active-scale"
-        >
-          <Download className="w-5 h-5" /> Install for iPhone
-        </button>
-      </div>
-      <p className="text-xs text-stone-500 dark:text-stone-400 text-center">
-        On Android, Install adds Glazy to your home screen like a store app. On iPhone, Apple only allows
-        installs from Safari, so the steps appear when you tap the button.
+    <section className="space-y-4 text-center">
+      <button
+        onClick={onInstallClick}
+        disabled={busy}
+        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-[#C95565] text-white font-semibold shadow-soft hover:bg-[#B34757] active-scale disabled:opacity-60"
+      >
+        <Download className="w-5 h-5" /> {busy ? 'Installing…' : label}
+      </button>
+      <p className="text-xs text-stone-500 dark:text-stone-400">
+        {canOneTap
+          ? 'Your browser will ask you to confirm. Glazy then appears on your home screen like a store app.'
+          : device === 'ios'
+            ? 'iPhone installs are done from Safari, so the steps appear when you tap the button.'
+            : 'Your browser shows the install steps for this device when you tap the button.'}
       </p>
 
-      {stepsFor && (
+      {showSteps && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4" role="dialog" aria-modal="true">
-          <div className="w-full max-w-md bg-[#FDF8F6] dark:bg-[#1E1D24] rounded-3xl p-6 shadow-soft">
+          <div className="w-full max-w-md bg-[#FDF8F6] dark:bg-[#1E1D24] rounded-3xl p-6 shadow-soft text-left">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-serif text-xl font-bold text-stone-900 dark:text-stone-100">Install Glazy</h3>
-              <button onClick={() => setStepsFor(null)} className="p-1 text-stone-500" aria-label="Close">
+              <h3 className="font-serif text-xl font-bold text-stone-900 dark:text-stone-100">{DIALOG_TITLE}</h3>
+              <button onClick={() => setShowSteps(false)} className="p-1 text-stone-500" aria-label="Close">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <ol className="space-y-2 list-decimal pl-5 text-sm text-stone-700 dark:text-stone-200">
-              {STEP_LISTS[stepsFor].map((s) => <li key={s}>{s}</li>)}
+              {STEP_LISTS[stepsKey].map((s) => <li key={s}>{s}</li>)}
             </ol>
-            {stepsFor === 'ios' && (
+            {stepsKey === 'ios' && (
               <p className="mt-3 flex items-center gap-2 text-xs text-stone-500">
                 <Share className="w-4 h-4" /> Look for the Share icon in Safari.
               </p>
@@ -130,85 +162,82 @@ const LandingPage: React.FC = () => {
   }, []);
 
   return (
-  <div className="min-h-full bg-[#FDF8F6] dark:bg-[#16151A] text-stone-800 dark:text-stone-100 overflow-y-auto">
-    <div className="max-w-2xl mx-auto px-4 pb-16 pt-10 space-y-12">
-      <header className="text-center space-y-5 rounded-[2rem] bg-gradient-to-b from-[#FCE8EC] via-[#FDF8F6] to-[#FDF8F6] dark:from-[#4A1D28]/40 dark:via-[#16151A] dark:to-[#16151A] px-5 pt-8 pb-10">
-        <div className="text-6xl" aria-hidden="true">🐱</div>
-        <h1 className="font-serif italic font-bold text-5xl tracking-tight">Glazy</h1>
-        <p className="text-xl font-semibold text-[#C95565]">Two hearts, one little space.</p>
-        <p className="text-lg text-stone-600 dark:text-stone-300">
-          Chat, water a shared garden, wander a 3D town and play daily games, just the two of you.
-        </p>
-        <div className="flex flex-col sm:flex-row justify-center gap-3 pt-2">
-          <a href="#install" className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#C95565] text-white font-semibold shadow-soft hover:bg-[#B34757]">
-            <Download className="w-4 h-4" /> Download the Glazy app
-          </a>
-          <Link to="/login" className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full border border-[#C95565] text-[#C95565] font-semibold">
-            <LogIn className="w-4 h-4" /> Open in browser
-          </Link>
-        </div>
-        <p className="text-xs text-stone-500 dark:text-stone-400">Works on Android and iPhone</p>
-      </header>
+    <div className="min-h-full bg-[#FDF8F6] dark:bg-[#16151A] text-stone-800 dark:text-stone-100 overflow-y-auto">
+      <div className="max-w-2xl mx-auto px-4 pb-16 pt-10 space-y-12">
+        <header className="text-center space-y-5 rounded-[2rem] bg-gradient-to-b from-[#FCE8EC] via-[#FDF8F6] to-[#FDF8F6] dark:from-[#4A1D28]/40 dark:via-[#16151A] dark:to-[#16151A] px-5 pt-8 pb-10">
+          <h1 className="font-serif italic font-bold text-5xl tracking-tight">Glazy</h1>
+          <p className="text-xl font-semibold text-[#C95565]">Two hearts, one little space.</p>
+          <KittyGuide />
+          <div className="flex flex-col sm:flex-row justify-center gap-3 pt-2">
+            <a href="#install" className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#C95565] text-white font-semibold shadow-soft hover:bg-[#B34757]">
+              <Download className="w-4 h-4" /> Download the Glazy app
+            </a>
+            <Link to="/login" className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full border border-[#C95565] text-[#C95565] font-semibold">
+              <LogIn className="w-4 h-4" /> Open in browser
+            </Link>
+          </div>
+          <p className="text-xs text-stone-500 dark:text-stone-400">Works on Android and iPhone</p>
+        </header>
 
-      <section className="space-y-3">
-        <h2 className="font-serif text-2xl font-bold">What is Glazy?</h2>
-        <p className="text-stone-600 dark:text-stone-300">
-          Glazy is an app for two people. You make one space together, and everything in it, from messages to
-          photos, is shared only between the two of you.
-        </p>
-      </section>
+        <section className="space-y-3">
+          <h2 className="font-serif text-2xl font-bold">What is Glazy?</h2>
+          <p className="text-stone-600 dark:text-stone-300">
+            Glazy is an app for two people. You make one space together, and everything in it, from messages to
+            photos, is shared only between the two of you.
+          </p>
+        </section>
 
-      <section className="space-y-3">
-        <h2 className="font-serif text-2xl font-bold">What you can do</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {FEATURES.map(({ icon: Icon, t, d }) => (
-            <div key={t} className="bg-white dark:bg-[#1E1D24] rounded-2xl p-4 shadow-soft">
-              <div className="flex items-center gap-2 font-semibold">
-                <Icon className="w-4 h-4 text-[#C95565]" /> {t}
+        <section className="space-y-3">
+          <h2 className="font-serif text-2xl font-bold">What you can do</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {FEATURES.map(({ icon: Icon, t, d }) => (
+              <div key={t} className="bg-white dark:bg-[#1E1D24] rounded-2xl p-4 shadow-soft">
+                <div className="flex items-center gap-2 font-semibold">
+                  <Icon className="w-4 h-4 text-[#C95565]" /> {t}
+                </div>
+                <p className="text-sm text-stone-600 dark:text-stone-300 mt-1">{d}</p>
               </div>
-              <p className="text-sm text-stone-600 dark:text-stone-300 mt-1">{d}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
 
-      <section className="space-y-3">
-        <h2 className="font-serif text-2xl font-bold">How it works</h2>
-        <div className="space-y-3">
-          {HOW_IT_WORKS.map(({ icon: Icon, t, d }) => (
-            <div key={t} className="flex gap-3">
-              <Icon className="w-5 h-5 mt-0.5 text-[#C95565] shrink-0" />
-              <div>
-                <p className="font-semibold">{t}</p>
-                <p className="text-sm text-stone-600 dark:text-stone-300">{d}</p>
+        <section className="space-y-3">
+          <h2 className="font-serif text-2xl font-bold">How it works</h2>
+          <div className="space-y-3">
+            {HOW_IT_WORKS.map(({ icon: Icon, t, d }) => (
+              <div key={t} className="flex gap-3">
+                <Icon className="w-5 h-5 mt-0.5 text-[#C95565] shrink-0" />
+                <div>
+                  <p className="font-semibold">{t}</p>
+                  <p className="text-sm text-stone-600 dark:text-stone-300">{d}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="font-serif text-2xl font-bold">How to use Glazy</h2>
+          <ol className="space-y-2 list-decimal pl-5 text-stone-700 dark:text-stone-200">
+            {STEPS.map((s) => <li key={s}>{s}</li>)}
+          </ol>
+          <p className="text-sm text-stone-500 dark:text-stone-400">
+            Tip: keep your PIN somewhere safe. It is the only key to your space.
+          </p>
+        </section>
+
+        <div id="install" className="scroll-mt-6 space-y-3">
+          <h2 className="font-serif text-2xl font-bold text-center">Install the app</h2>
+          <InstallSection />
         </div>
-      </section>
 
-      <section className="space-y-3">
-        <h2 className="font-serif text-2xl font-bold">How to use Glazy</h2>
-        <ol className="space-y-2 list-decimal pl-5 text-stone-700 dark:text-stone-200">
-          {STEPS.map((s) => <li key={s}>{s}</li>)}
-        </ol>
-        <p className="text-sm text-stone-500 dark:text-stone-400">
-          Tip: keep your PIN somewhere safe. It is the only key to your space.
-        </p>
-      </section>
-
-      <div id="install" className="scroll-mt-6 space-y-3">
-        <h2 className="font-serif text-2xl font-bold text-center">Install the app</h2>
-        <InstallSection />
+        <footer className="pt-6 border-t border-stone-200 dark:border-stone-700 text-sm text-stone-500 dark:text-stone-400 flex flex-wrap justify-center gap-x-6 gap-y-2">
+          <Link to="/terms" className="hover:underline">Terms</Link>
+          <Link to="/privacy" className="hover:underline">Privacy</Link>
+          <Link to="/login" className="hover:underline">Sign in</Link>
+        </footer>
       </div>
-
-      <footer className="pt-6 border-t border-stone-200 dark:border-stone-700 text-sm text-stone-500 dark:text-stone-400 flex flex-wrap justify-center gap-x-6 gap-y-2">
-        <Link to="/terms" className="hover:underline">Terms</Link>
-        <Link to="/privacy" className="hover:underline">Privacy</Link>
-        <Link to="/login" className="hover:underline">Sign in</Link>
-      </footer>
     </div>
-  </div>
   );
 };
 
