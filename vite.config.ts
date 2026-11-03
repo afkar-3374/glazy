@@ -36,7 +36,8 @@ export default defineConfig({
         background_color: '#FFF4E8',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
+        // The installed app opens straight into the app (the kitty timer), not the details page
+        start_url: '/login',
         scope: '/',
         categories: ['utilities', 'productivity'],
         icons: [

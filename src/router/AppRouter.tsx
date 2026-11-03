@@ -41,8 +41,10 @@ export const AppRouter: React.FC = () => {
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
 
+        {/* The details page is always shown at the site root, even when signed in */}
+        <Route path="/" element={<LandingPage />} />
+
         <Route element={<PublicRoute />}>
-          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
         </Route>

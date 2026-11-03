@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Heart, Download, Smartphone, Lock, MessageCircle, Sprout, Gamepad2, Globe, Share, LogIn, X, Clock,
@@ -121,22 +121,33 @@ const InstallSection: React.FC = () => {
   );
 };
 
-const LandingPage: React.FC = () => (
+const LandingPage: React.FC = () => {
+  useEffect(() => {
+    document.title = 'Glazy · a private space for two';
+    return () => {
+      document.title = 'Kitty Timer';
+    };
+  }, []);
+
+  return (
   <div className="min-h-full bg-[#FDF8F6] dark:bg-[#16151A] text-stone-800 dark:text-stone-100 overflow-y-auto">
     <div className="max-w-2xl mx-auto px-4 pb-16 pt-10 space-y-12">
-      <header className="text-center space-y-4">
+      <header className="text-center space-y-5 rounded-[2rem] bg-gradient-to-b from-[#FCE8EC] via-[#FDF8F6] to-[#FDF8F6] dark:from-[#4A1D28]/40 dark:via-[#16151A] dark:to-[#16151A] px-5 pt-8 pb-10">
+        <div className="text-6xl" aria-hidden="true">🐱</div>
         <h1 className="font-serif italic font-bold text-5xl tracking-tight">Glazy</h1>
+        <p className="text-xl font-semibold text-[#C95565]">Two hearts, one little space.</p>
         <p className="text-lg text-stone-600 dark:text-stone-300">
-          A private little space for two: chat, a shared garden, a 3D town and daily games.
+          Chat, water a shared garden, wander a 3D town and play daily games, just the two of you.
         </p>
-        <div className="flex justify-center gap-3 pt-2">
-          <Link to="/login" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#C95565] text-white font-semibold shadow-soft">
-            <LogIn className="w-4 h-4" /> Sign in
-          </Link>
-          <a href="#install" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#C95565] text-[#C95565] font-semibold">
-            <Download className="w-4 h-4" /> Install
+        <div className="flex flex-col sm:flex-row justify-center gap-3 pt-2">
+          <a href="#install" className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#C95565] text-white font-semibold shadow-soft hover:bg-[#B34757]">
+            <Download className="w-4 h-4" /> Download the Glazy app
           </a>
+          <Link to="/login" className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full border border-[#C95565] text-[#C95565] font-semibold">
+            <LogIn className="w-4 h-4" /> Open in browser
+          </Link>
         </div>
+        <p className="text-xs text-stone-500 dark:text-stone-400">Works on Android and iPhone</p>
       </header>
 
       <section className="space-y-3">
@@ -198,6 +209,7 @@ const LandingPage: React.FC = () => (
       </footer>
     </div>
   </div>
-);
+  );
+};
 
 export default LandingPage;
